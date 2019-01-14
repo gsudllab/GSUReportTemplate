@@ -1,0 +1,131 @@
+\documentclass[11pt, english]{article}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, linkcolor=blue]{hyperref}
+\usepackage[english]{babel}
+\selectlanguage{english}
+\usepackage[utf8]{inputenc}
+\usepackage[svgnames]{xcolor}
+
+\usepackage{afterpage}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\pagestyle{plain}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\usepackage{here}
+
+\textheight=21cm
+\textwidth=16cm
+%\topmargin=-1cm
+\oddsidemargin=0cm
+\parindent=0mm
+\pagestyle{plain}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{color}
+\usepackage{ragged2e}
+
+\begin{document}
+
+\setlength\parskip{.3\baselineskip}
+\begin{titlepage}
+
+\begin{center}
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=8cm]{gsu_c_logo}
+\end{center}
+\end{figure}
+
+\begin{Large}
+\textbf{Georgia State University} \\
+\end{Large}
+Department of Computer Science \\
+\vspace*{0.2in}
+\begin{Large}
+\textbf{title of report} \\
+\end{Large}
+\vspace*{0.3in}
+\begin{large}
+Ph.D Qualifier Report\\
+\end{large}
+\vspace*{0.3in}
+\begin{large}
+Xiulong Yang\\
+\end{large}
+\vspace*{0.3in}
+\rule{80mm}{0.1mm}\\
+\vspace*{0.1in}
+\begin{large}
+Committee:\\
+\vspace*{0.1in}
+Dr.(Chair), Dr., and Dr.\\
+\end{large}
+\end{center}
+\end{titlepage}
+
+\newcommand{\CC}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}}
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+
+%----------------------------------------------------------------------------------------
+%	Abstract Section
+%----------------------------------------------------------------------------------------
+
+\input{abstract.tex}
+\newpage
+
+\tableofcontents
+\newpage
+
+%----------------------------------------------------------------------------------------
+%	Introduction Section
+%----------------------------------------------------------------------------------------
+
+\input{introduction.tex}
+\newpage
+%----------------------------------------------------------------------------------------
+%	background Section
+%----------------------------------------------------------------------------------------
+
+\input{background.tex}
+\newpage
+
+%----------------------------------------------------------------------------------------
+%	paper1 Section
+%----------------------------------------------------------------------------------------
+
+\input{paper1.tex}
+\newpage
+%----------------------------------------------------------------------------------------
+%	paper2 Section
+%----------------------------------------------------------------------------------------
+
+\input{paper2.tex}
+\newpage
+
+%----------------------------------------------------------------------------------------
+%   future work Section
+%----------------------------------------------------------------------------------------
+\input{future.tex}
+
+%----------------------------------------------------------------------------------------
+%   Conclusion Section
+%----------------------------------------------------------------------------------------
+\input{conclusion.tex}
+
+\newpage
+
+\bibliographystyle{plain}
+\bibliography{ref}
+
+\end{document}
