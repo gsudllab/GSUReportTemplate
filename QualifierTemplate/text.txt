@@ -1,0 +1,655 @@
+
+\begin{abstract}
+  Machine learning and Deep neural networks have achieved the state-of-the-art performance on all kinds of recognition and learning tasks, such as image classification, speech recognition and natural language processing. However, training a (deep) model requires a large amount of labeled data, which is rather restrictive in practice since collecting a large set of labeled data is very expensive and time consuming in many domains. One way to ease this problem is active learning, which actively chooses data samples for labeling to achieve the highest possible score like the recognition accuracy under a limited labeling budget. The core idea of active learning contains a) uncertainty estimation that evaluates the informativeness of data samples for label acquisition, while Bayesian learning is the most principled way for uncertainty estimation. b) recuding the redundancy of unlabeled samples acquired in a batch, while a combination of Gaussian kernels can measure the similarities between pairs of points and represent the diversity and density of points.
+
+  In this work, two uncertainty-based algorithms for active learning will be investigated, including sparse modeling and ensembles. Experiments show their power to perform better beyond other previous works. And their shortcomings and some future directions also will be discussed.
+
+  \textbf{Key words:} Deep Learning, Active Learning, Uncertainty Estimation, Deep Ensemble, Sparse Modeling
+    
+
+\end{abstract}
+\section{Related Work}
+
+
+\subsection{(Deep) Active Learning}
+A comprehensive review of active learning can be found at \cite{Settles10activelearning}. Many Active Learning strategies are summarized in it, though it does not include any work about deep neural networks on Active Learning. Active learning concepts relevant for this paper include uncertainty sampling, query-by-committee, expected model change and expected error reduction, density-based approaches, etc.
+And to the best of our knowledge, \cite{stark2015captcha} and \cite{Wang2016costactive} claim to be the first to study active learning for CNN and image classification with deep learning. \cite{Gal2017Active}and \cite{NIPS_Uncertainty} show that sampling based on a Bayesian uncertainty measure can be more advantageous.
+
+There are several types of acquisition functions for Active Learning.  Yarin Gal et al. \cite{Gal2017Active} use uncertainties over network predictions for Active Learning on MNIST and a small medical data set. Uncertainty estimates are obtained by sampling from the average softmax output of multiple forward passes with random dropout masks—known as Monte Carlo (MC) Dropout \cite{Gal2016Dropout}. Based on the uncertainty, \cite{Gal2017Active} shows different acquisition functions, such as Max Entropy, BALD(query-by-committee), Variation Ratios and Mean STD. However, the performance of the uncertainty based active learning depends on the robustness of the pre-trained classifiers. Sometimes uncertainty sampling even works worse than random sampling when very limited labeled data are used to train the initial classifier \cite{Tomanek_active}. 
+
+On the other hand, some active learning methods take advantage of the representativeness of the unlabeled data to overcome the weakness of uncertainty based methods \cite{Yang_diverse_active}, \cite{sener2018active}. \cite{sener2018active} propose a density approach to cover the entire space of unlabeled data points with a geometric similarity function of images. \cite{Yang_diverse_active} model the sample selection as an optimization problem with a kernel matrix. So it tries to find the best trade-off between the uncertainty and the diversity.
+
+\subsection{Ensembles for (deep) neural networks (to estimate uncertainty)}
+People has used the ensemble of learners for improving task performance in classifiers, such as neural networks and Naïve Bayes for many years \cite{Ensemble_Methods}, \cite{network_ensembles}. Today, ensembles are widely used in machine learning (see \cite{Ensemble_Methods} for a review) and deep learning \cite{resnet}.  Besides increasing task accuracy,  \cite{DENSEMBLE_NIPS} and \cite{BDQN_NIPS} use ensembles to estimate uncertainty of neural networks. And the experimental results from Lakshminarayanan et al.\cite{DENSEMBLE_NIPS} show that the deep ensemble method can have a better measure the uncertainty than the MC-dropout. And the MC-Dropout\cite{Gal2016Dropout} can also be interpreted as an approximation to a full ensemble (consisting of separate networks) as we apply multiple forward passes with different dropout masks on single input. 
+
+\section{Conclusion}
+
+This report summarizes the work of two papers on Active Learning. Especially both of them were focused uncertainty-based, pool-based active learning. The first paper\cite{Beluch_2018_CVPR} explored the performance of uncertainty estimation by MC-dropout, ensemble-based and the combination of them for Active Learning. The second one\cite{Wang2019} proposed their method that uses the sparse linear combination to represent the uncertainty of unlabeled data with Gaussian kernels, reduces the representation error by a selective sampling strategy and efficiently optimizes the sparse modeling problem by two approximated approaches. The experimental results proved that the proposed approaches work and gain some improvement. But we also found that both of them have some deficiency and room for further exploration. It would be interesting to see continuing work based on their ideas.
+\section{Future Work}
+
+There're two main drawbacks of deep ensemble based active learning\cite{Beluch_2018_CVPR}. 
+
+a) It is computationally expensive to train multiple networks as an ensemble. The sparse modeling method\cite{Wang2019} focuses on improving the quality of selecting samples in a batch. Another way is to improve the technique called Implicit Ensembling(\cite{huang2017snapshot}) to achieve a similar accuracy to the deep ensemble.
+
+b) Deep Ensemble trains the ensemble ignoring the information between the networks. We can add more diversity for the networks in a ensemble which works like pushing members as particles away from each other. B) Bayesian variational inference methods like Stein Variational Gradient Descent \cite{svgd}. Deep Ensemble doesn't take advantage of the relationship between netwroks. So if we add some extra computation to utilize the information, the accuracy will gain a small improvement than the deep ensemble.
+
+The sparse modeling method\cite{Wang2019} also faces the issue of high computation. One of the potential way is taking use of RVM(relevance vector machine)\cite{tipping2000relevance} which may cause a better estimation on the density and diversity based on the uncertainty estimation. 
+\section{Introduction}
+
+Over the past few years, machine learning and deep learning methods have successively advanced the state-of-the-art on many learning tasks, such as support vector machine(SVM), convolutional neural networks (CNN) for image classification in computer vision, recurrent neural networks (RNN) for machine translation in natural language processing.
+However,  since the advantages of deep learning will diminish when working with small datasets, a core challenge in deep learning is to require a large amount of labeled data. And for a shallow machine learning model like SVM, the performance can also degrade because the testing dataset may not be well represented by the training dataset if the training dataset is small.
+
+However collecting a large set of labeled data is very expensive manual labeling and time-consuming in many domains. These practical requirements come up with a critical question: ”is there an optimal way to acquire labels for data points such that the best performance will be obtained given by a limited budget.” And the active learning approach is one of the common frameworks to address this question. Because it can interactively query for ground truth to obtain new training data and reduce the amount of redundant samples.
+
+In the process of the active learning, a model is trained on the initial training set with a relatively small amount of data, and an acquisition function based on the uncertainty scores or the representativeness scores decides what data points to ask for a label by an oracle. Then given a pool set of unlabeled data points, the acquisition function selects one or more points from the pool set. An oracle such as a human expert will give labels to the selected data points. Next, these points are added to the training set and train a new model based on the updated training set. This active learning process is then repeated, with the training set increasing in size over time.
+
+Even though the active learning framework has been proven to be useful in a variety of tasks, a major remaining challenge is the lack of scalability to high-dimensional data and the uncertainty estimates for unlabeled data are hard to obtain with standard CNN. So different methods have been proposed for CNN in (\cite{Gal2017Active}, \cite{sener2018active}, \cite{Wang2016costactive} ).
+
+In this work, two selected papers, "Uncertainty-Based Active Learning via Sparse Modeling for Image Classification"\cite{Wang2019} and "The Power of Ensembles for Active Learning in Image Classification" \cite{Beluch_2018_CVPR} presented two approaches for deriving uncertainty estimates for unlabeled samples. They are compared to some benchmark methods to show the improvement gained by them and some further experiments explore the potential ability of both two methods.
+
+The outline of the report is as follows: In Section II,
+we will review some related work of active learning. In Section III, the ensembles-based approaches will be introduced. The sparse modeling method is then introduced in Section III. Finally, we provide some conclusions and future work in Section V.
+\documentclass[11pt, english]{article}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, linkcolor=blue]{hyperref}
+\usepackage[english]{babel}
+\selectlanguage{english}
+\usepackage[utf8]{inputenc}
+\usepackage[svgnames]{xcolor}
+
+\usepackage{afterpage}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\pagestyle{plain}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+%\lstset{language=R,
+%    basicstyle=\small\ttfamily,
+%   stringstyle=\color{DarkGreen},
+%    otherkeywords={0,1,2,3,4,5,6,7,8,9},
+%    morekeywords={TRUE,FALSE},
+%    deletekeywords={data,frame,length,as,character},
+%    keywordstyle=\color{blue},
+%    commentstyle=\color{DarkGreen},
+%}
+
+\usepackage{here}
+
+
+\textheight=21cm
+\textwidth=16cm
+%\topmargin=-1cm
+\oddsidemargin=0cm
+\parindent=0mm
+\pagestyle{plain}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{color}
+\usepackage{ragged2e}
+
+\begin{document}
+
+\setlength\parskip{.3\baselineskip}
+\begin{titlepage}
+
+\begin{center}
+\begin{figure}[htb]
+\begin{center}
+\includegraphics[width=8cm]{gsu_c_logo}
+\end{center}
+\end{figure}
+
+\begin{Large}
+\textbf{Georgia State University} \\
+\end{Large}
+Department of Computer Science \\
+\vspace*{0.2in}
+\begin{Large}
+\textbf{Uncertainty-based Active Learning for Image Classification}
+\end{Large}
+\vspace*{0.3in}
+\begin{large}
+Ph.D Qualifier Report\\
+\end{large}
+\vspace*{0.3in}
+\begin{large}
+Xiulong Yang\\
+\end{large}
+\vspace*{0.3in}
+\rule{80mm}{0.1mm}\\
+\vspace*{0.1in}
+\begin{large}
+Committee:\\
+\vspace*{0.1in}
+Dr.Banda(Chair), Dr.Angryk, and Dr.Zelikovsky\\
+\end{large}
+\end{center}
+\end{titlepage}
+
+\newcommand{\CC}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}}
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+
+%----------------------------------------------------------------------------------------
+%	Abstract Section
+%----------------------------------------------------------------------------------------
+
+\input{abstract.tex}
+\newpage
+
+\tableofcontents
+\newpage
+
+%----------------------------------------------------------------------------------------
+%	Introduction Section
+%----------------------------------------------------------------------------------------
+
+\input{introduction.tex}
+\newpage
+%----------------------------------------------------------------------------------------
+%	background Section
+%----------------------------------------------------------------------------------------
+
+\input{background.tex}
+\newpage
+
+%----------------------------------------------------------------------------------------
+%	paper1 Section
+%----------------------------------------------------------------------------------------
+
+\input{paper1.tex}
+\newpage
+%----------------------------------------------------------------------------------------
+%	paper2 Section
+%----------------------------------------------------------------------------------------
+
+\input{paper2.tex}
+\newpage
+
+%----------------------------------------------------------------------------------------
+%   future work Section
+%----------------------------------------------------------------------------------------
+\input{future.tex}
+
+%----------------------------------------------------------------------------------------
+%   Conclusion Section
+%----------------------------------------------------------------------------------------
+\input{conclusion.tex}
+
+\newpage
+
+\bibliographystyle{plain}
+\bibliography{ref}
+
+\end{document}\section{The Power of Ensembles for Active Learning in Image Classification}
+
+\subsection{Uncertainty Estimation}
+
+For active learning, the key component is how to represent prediction uncertainty of a data point. And since deep learning techniques are designed to capture spatial information of images and have been used successfully to achieve state-of-the-art results for image classification tasks, it's natural for us to us a neural network as a model. Then we define a likelihood model
+$$
+p(y=c|x, w) = softmax(f(x))
+$$
+. The $w$ is the parameters of a neural network, and $f$ is the output of model. So for each input image, we can get a probability vector $p(y=c|x, w)$ and in next section, we will show how to define acquisition functions to estimate the uncertainty based on the probability vector.
+
+\subsubsection{Acquisition Functions}
+
+In this paper, the authors explore three different uncertainty-based acquisition functions. All of them can applied to the outputs obtained by either MC-dropout or deep ensembles. As mentioned above, these functions are introduced in \cite{Gal2017Active} for Active Learning. In the following parts, $T$ always refers to either the number of forward passes in MC-dropout, or the number of ensembles used.
+
+Three uncertainty-based acquisition functions used in this paper are:
+
+\begin{enumerate}
+\item choose pool points whose predicted classification probability distributions have the maximum entropy(\textit{Max Entropy}, \cite{shannon1948mathematical}):
+\begin{equation}
+\mathbb{H}[y|\mathbf{x},\mathcal{D}_{\text{train}}]=-\sum_{c} p(y=c|\mathbf{x},\mathcal{D}_{\text{train}})\log p(y=c|\mathbf{x},\mathcal{D}_{\text{train}}).
+\end{equation}
+
+It's the commonest measure for Active Learning.
+\item choose pool points that maximise the mutual information between predictions and model posterior (\textit{BALD}, \cite{houlsby2011bayesian}) 
+\begin{equation}
+\begin{aligned}
+\mathbb { I } [ y , \boldsymbol { \omega } | \mathbf { x } , \mathcal { D } _ { \text { train } } ] & = \mathbb { H } [ y | \mathbf { x } , \mathcal { D } _ { \text { train } } ] - \mathbb { E } _ { p ( \boldsymbol { \omega } | \mathcal { D } _ { \text { train } } ) } [ \mathbb { H } [ y | \mathbf { x } , \boldsymbol { \omega } ] ]\\
+&=\mathbb{H}[y|\mathbf{x}, \mathcal{D}_{\text{train}}] - \frac{1}{T}\sum_{t}\sum_{c} - p(y=c|x, w_{t})\log p(y=c|x, w_{t}).
+\end{aligned}
+\end{equation}
+
+The measure consists of the entropy over predictions minus the conditional entropy over predictions given the weights, approximated for the CNN case.
+\item maximise Variation Ratios \cite{freeman1965elementary}
+\begin{equation}
+\text{variation-ratio}[ \mathrm { x } ] = 1 - \frac { f _ { \mathrm { x } } } { T } = 1 - \frac {\sum _ { t } 1 [ y ^ { t } = c ^ { * } ]}{T}.
+\end{equation}
+$c ^ { * }$ being the modal class prediction of $\{ y ^ { t }\}$ (a set of samples from the predictive distribution at input x).Thus the variation ratio is a measure of dispersion of a nominal variable.
+\end{enumerate}
+
+\subsection{Ensemble Learning}
+
+Since the active learning approach starts with a model trained by a small set of labeled data, the accuracy of such a model will be inaccurate. Then the ensemble learning is introduced for improving the accuracy. In particular, two different ensemble methods are proposed and investigated in this paper: Monte-Carlo dropout (MC-dropout) (\cite{Gal2016Dropout}) and deep ensemble(\cite{DENSEMBLE_NIPS}, \cite{BDQN_NIPS}). 
+
+\subsubsection{MC-dropout}
+
+Yarin Gal et al. have applied the former one MC-dropout on Active Learning\cite{Gal2017Active}. The approach of MC-dropout is using a Bayesian perspective to interprets the dropout regularization as a variational Bayesian approximation. When we use MC-dropout, it trains the neural network with the data $D_{train}$ as usual with dropout firstly. Then during inference, it performs $T$ forward passes through the network, each pass sampling with a different dropout mask, which results in a difference in the weights $w_t$. Finally, the $T$ softmax vectors will be averaged to obtain the approximate posterior for a given class $c$ and input $x$ using Monte Carlo integration:
+
+\begin{equation}
+    \begin{aligned}
+    p(y=c|x, D_{train}) = & \int p(y=c|x,w)p(w|D_{train})dw \\
+    \approx & \int p(y=c|x,w)q^*_{\theta}(w)dw \\
+    \approx & \frac{1}{T} \sum_{t=1}^{T} p(y=c|x,\hat{w}_t)  
+    \end{aligned}
+\label{bayesian_posterior}
+\end{equation}
+with $\hat{w}_t \sim q^{*}_{\theta}(w)$, where $q_{\theta}(w)$ is the Dropout distribution. For MC-dropout in active learning, the prediction uncertainty can be induced from the uncertainty in the weights by marginalising over the approximate posterior. 
+
+\subsubsection{Deep Ensemble}
+
+Lakshminarayanan et al.\cite{DENSEMBLE_NIPS} found the deep ensemble method could have a better measure the uncertainty than the MC-dropout. This approach trains an ensemble of N classifiers and uses the averaged softmax vectors of each classifier as the posterior (same as equation \ref{bayesian_posterior}, replacing T with N). 
+\begin{equation}
+    p(y=c|x, D_{train}) \approx \frac{1}{N} \sum_{i=1}^{N} p(y=c|x,w_i)  
+    \label{ensemble_posterior}
+\end{equation}
+
+According to the statement in \cite{DENSEMBLE_NIPS}, all ensembles are trained with the same data set namely $D_{train}$ and the same network architecture. But they have different random weight initialization $w_{init}$ and different seed for gradient descent. An experiment show that such a simple difference can cause a high diversity in the ensemble of models. With the probability vectors of the deep ensemble, the deep ensemble-based approach is applied in active learning for uncertainty estimation \cite{Beluch_2018_CVPR}. 
+
+\subsection{Experimental results}
+
+The authors evaluated the models on MNIST (\cite{mnist}), CIFAR-10 (\cite{cifar10}), a diabetic retinopathy dataset (\cite{retinopathy}) and ImageNet(\cite{resnet}). Shaded areas in the plots denote $\pm$ one standard deviation.
+
+\subsubsection{Model Descriptions}
+
+The settings for the experiments are described in Table \ref{tab:table1}. 
+
+\begin{enumerate}
+    \item MNIST: The network architecture for MNIST , referred to as “S-CNN”, contains two convolutional layers and one dense layer. It is the same as the Keras MNIST CNN implementation (\cite{keras_cnn}), which is also used in \cite{Gal2017Active}. 
+    \item CIFAR-10: The authors experiment a CNN model with four convolutional layers and one dense layer as the Keras CIFAR CNN implementation (\cite{keras_cnn}), which we refer to as “K-CNN”. 
+    
+    Additionally they also evaluate with DenseNet-121 (k = 12, with bottleneck), using the learning rate schedule as proposed in \cite{denseNet}. 
+    \item diabetic retinopathy dataset: Details for the inceptionV3 architecture are described in section 4.5.
+    \item ImageNet: ResNet-50\cite{resnet} is used in the experiments. The network is trained for 100 epochs without data augmentation using stochastic gradient descent. The initial learning rate of 0.1 is changed to 0.01 at epoch 50, and 0.001 at epoch 75. The initial 40,000 images are class-balanced.
+\end{enumerate}
+
+\begin{table}[H]
+  \begin{center}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{lllllll}
+    \hline
+                    & Model       & Epochs & Data size                   & \multicolumn{3}{l}{Acquisition size}           \\
+            &             &                 & train/val/test          &                  &                 &            \\ \hline
+MNIST       & S-CNN       & 50              & 58,000/2,000/10,000     & 20               & 20 (2K)       & 1,000   \\
+CIFAR-10    & K-CNN       & 150             & 48,000/2,000/10,000     & 200              & 400 (4K)      & 9,800   \\
+CIFAR-10    & DenseNet    & 100             & 48,000/2,000/10,000     & 500              & 2000 (20K)    & 14,500  \\
+Diabetic R. & InceptionV3 & 150             & 67,961/3,000/17,741     & 1,000            & 5,000 (30K)   & 21,000  \\
+ImageNet    & ResNet-50   & 100             & 1,281,167/10,000/50,000 & 4,000            & 40,000 (400K) & 280,000 \\ \hline
+    \end{tabular}}
+    \caption{Settings used for the active learning experiments on the MNIST, CIFAR-10 and Diabetic Retinopathy dataset:\newline
+    \textbf{Epochs}: Maximum number of training epochs.\newline
+    \textbf{Data size}: Size of data set for training / validation / test.\newline
+    \textbf{Acquisition size}: number of images for the initial model + number of images acquired in each step (from the number of images in the pool subsample),  Maximum number of images acquired during training.
+    }
+    \label{tab:table1}
+  \end{center}
+\end{table}
+
+\subsubsection{Results for active learning on image data}
+
+The authors evaluate the active learning performance under different methods for uncertainty estimation. They are: an ensemble of five networks, MC Dropout, and a single, standard network. Some selected results are shown in \ref{figure1}. And the remain results of Variation Ratio, BALD and Entropy are show in \ref{figure2}.
+
+As we expected, the ensemble-based approach works better than all others methods On MNIST and CIFAR datasets and shows a clear margin, while the MC-VarR performs similarly to the Single model+Entropy approach. By the way, The core-set approach is similar to random acquisition on MNIST, worse than random on CIFAR-10 using K-CNN and better than random on CIFAR-10 using DenseNet. The worse performance compared to the original paper could be due to the different feature representations produced by the network architectures, or the prevalence of outliers hindering the greedy core-set approach.
+
+Table \ref{tab:table2} shows the mean and standard deviation over five runs of labeled images needed to achieve a top-1 accuracy of 80$\%$, 85\%, and 87.5\%. And generally, deep ensemble based methods need less labeled images and have lower variances.
+
+\begin{figure}[ht!]
+    \centering
+    \label{figure1}
+    \includegraphics[width=15.4cm]{de_cmp1.png}
+    \caption{Test accuracy over acquired images. We compare Variation Ratio for MC dropout and the ensemble(ENS) and a single softmax based acquisition. The random acquisition is a baseline.}
+\end{figure}
+
+\begin{figure}[ht!]
+    \centering
+    \label{figure2}
+    \includegraphics[width=15.4cm]{de_cmp_all.png}
+    \caption{Comparing different acquisition functions. Test accuracy as a function of the number of images on MNIST and CIFAR-10}
+\end{figure}
+
+\begin{table}[H]
+  \begin{center}
+    \begin{tabular}{llll}
+        \hline
+    test        & ENS-VarR          & MC-VarR           & Single-Entry     \\
+    accuracy    & \multicolumn{3}{l}{Compare to to Random Acquisition} \\ \hline
+    80\% mean   & 4718 (6032)       & 6255(7470)        & 6711(7661)       \\
+    std.        & 206.2(57.8)       & 276.0(442.9)      & 216.2(565.6)     \\
+    85\% mean   & 7053(9613)        & 9888(13248)       & 9959(13300)      \\
+    std.        & 205.3(451.8)      & 186.6(481.6)      & 301.6(496.3)     \\
+    87.5\% mean & 9187(12830)       & 13388(-)          & 12453(-)         \\
+    std.        & 184.8(333.8)      & 280.9(-)          & 582.2(-)     \\   \hline
+    \end{tabular}
+    \caption{Mean and standard deviation over five runs of acquired images to achieve a top-1 accuracy. The ensemble approach needs less images to achieve a certain accuracy.}
+    \label{tab:table2}
+    \end{center}
+\end{table}
+
+\subsubsection{Comparing deep-ensemble-based against MC-Dropout performance}
+
+In figure \ref{figure3}, the authors investigate the impact of two different settings: a) training the ensemble with the images selected by MC-Dropout, and b) the reciprocal experiment of training MC Dropout with images acquired using ensembles. The results show that an MC-Dropout network using the ensemble selected images performs marginally worse than the ensemble acquisition function, and in contrast, using the deep ensemble to evaluate on the MC-Dropout selected images performs marginally better than the MC acquisition function. Essentially, this demonstrates that the acquisition quality of deep ensemble is superior to MC Dropout, and the difference can not simply be explained by the fact that evaluating with an ensemble is more accurate than evaluating with MC Dropout.
+
+\begin{figure}[ht!]
+    \centering
+    \label{figure3}
+    \includegraphics[width=15.4cm]{de_cmp_quality.png}
+    \caption{Test accuracy by MC Dropout and ensemble-based active learning.  (b) Acq.by.ENS-on MC: Images acquired by ensemble-based approach to train MC dropout network. ENS-Random: ensembles with random acquisition. Acq.by.MC-on ENS: Images acquired by MC Dropout to train ensemble. MC-Random: MC Dropout with random acquisition.}
+\end{figure}
+
+\subsubsection{ImageNet and diagnosis of diabetic retinopathy AL}
+
+Then the authors investigate the best performing method(ENS-VarR) on the large-scale image classification dataset ImageNet\cite{imagenet} and the detect diabetic retinopathy\cite{retinopathy} in eye fundus images. The results are displayed in Fig.\ref{figure4} and Fig.\ref{figure5} respectively. 
+
+As training an ensemble of networks on ImageNet is computationally costly, only a small improvement can be seen by the ENS-VarR than the random acquisition function by Fig.\ref{figure4}. And another result underlines that the deep ensemble approach can be usefully applied to a real-life medical use case on diagnosis of diabetic retinopathy.
+
+\begin{figure}[ht!]
+    \centering
+    \label{figure4}
+    \includegraphics[width=15.4cm]{de_cmp_imagenet.png}
+    \caption{Test top-1 accuracy over acquired images}
+\end{figure}
+
+\begin{figure}[ht!]
+    \centering
+    \label{figure5}
+    \includegraphics[width=15.4cm]{de_cmp_diag.png}
+    \caption{Test results for the diabetic retinopathy dataset. (a) AUC over acquired images. (b) Number of unhealthy images acquired and the percentage of total rDR images in the training set.}
+\end{figure}
+\section{Uncertainty-Based Active Learning via Sparse Modeling for Image ClassificationRelated Work}
+
+\subsection{Motivation}
+
+Beluch et al.\cite{Beluch_2018_CVPR} propose a deep ensemble based method for uncertainty estimation and apply it in active learning to improve the accuracy and reduce the amount of required labeled samples. And the experimental results show that the deep ensemble approach can improve both of estimating uncertainty and accuracy to outperform the single model and MC-Dropout. However the main drawback of deep ensemble is that training a ensemble of several models is highly computational expensive. So this paper propose another way to improve the active learning based on the uncertainty predicted by a single model.
+
+In \cite{Yang_diverse_active}, the authors have proposed a work to model the sample selection as an optimization problem with the following formulation,
+
+\begin{equation}
+\begin{aligned} 
+    \widehat{f} = & \operatorname{argmin}_{f} - f^{T} s + \frac{1}{2} f^{T} K f \\ 
+    &\text{s.t.}\sum_{i=1}^{n}f_{i}=1,\quad f_{i}\geq0
+\end{aligned}
+\label{equ:max_div}
+\end{equation}
+
+where $f$ is the updated ranking score, vector $s$ is the sample uncertainty, $K$ is a kernel matrix with $K_{i,j}=\exp(-\frac{||x_{i}-x_{j}||^{2}}{\sigma^{2}})$
+which measures the similarity between points $x_i$ and $x_j$. The first term $-f^Ts$ penalizes less if samples with high uncertainty and high ranking scores. With the second term, $f^T Kf$, the algorithm assigns high ranking scores to points with low similarity. By finding the best trade-off between the uncertainty and the diversity, this approach shows great power in image classification.
+
+However, the algorithm has some deficiency: 1) Isolated distinct samples with high uncertainty are encouraged to be selected. Therefore \ref{equ:max_div} will generate little penalty on the second term. However, since isolated samples are far away from the data density, selecting such samples is not very helpful in improving the classifier performance. 2) The algorithm does not take the batch size into consideration which may introduce extra redundancy for sampling. To address these issues, active learning via sparse modeling is proposed in the following section.
+
+\subsection{Sample Selection via Sparse Modeling}
+
+Given uncertainty values predicted from the model, we would like to select the most informative samples with highest uncertainty scores. However as above mentioned, we should avoid selecting samples with redundant information in the same batch. To achieve this goal, we formulate the problem via sparse representation to modify the uncertainty scores before sample selection,
+
+\begin{equation}
+\begin{aligned} 
+    \widehat{f} = & \operatorname{arg} \min_{f} ||Qf - s||^2, \\ 
+    &\text{s.t.}||f||_0 = B_q,\quad 1\geq f_{i}\geq0
+\end{aligned}
+\label{equ:formula}
+\end{equation}
+where $s$ is the original uncertainty values, $f$ is the modified uncertainty values, $||f||_0 = card(f)$ is the number of non-zeros entries, $B_q$ is the batch size and $Q$ is the similarity matrix among all the unlabeled samples. And a common method of designing similarity matrix $Q$ is using the Gaussian kernel:
+
+\begin{equation}
+    Q _ { i , j } = \exp \left( - \frac { \left\| x _ { i } - x _ { j } \right\| ^ { 2 } } { \sigma ^ { 2 } } \right)
+\end{equation}
+where $x_i, x_j$ can be any representations of the original data points, such as the probality vectors or the hidden outputs of the final layer.
+
+\subsubsection{Approximated Solution 1: Greedy Search}
+
+The solution to the problem in Eq.\ref{equ:formula} can be approximated using a greedy search method, i.e., we can select samples one-by-one and modify the uncertainty scores after each selection. We denote the similarity matrix $Q$ as $Q = [q_1, q_2, ... q_n]$, where each column vector $q_j$ in $Q$ represents the Gaussian kernel weights centered at the location of $x_j$. So the selection strategy is as follows:
+
+\begin{equation}
+    \widehat { k } ^ { t } , \widehat { f _ { \hat { k^t } } } = \arg \min _ { J \in U , f _ { j } } \left\| f _ { j } q _ { j } - s ^ { t } \right\| ^ { 2 }
+\end{equation}
+where $t$ is $t$-th iteration or selection from 1 to $B_q$, $s^t$ is a vector of uncertainty scores of all unlabeled samples, $f_j$ is a scalar which represents the modifie uncertainty score of the j-th sample, $U$ is the index set of unlabeled data, $k^t$ is the index of selected sample and $f_{k^t}$ is the modified uncertainty score for the selected sample.
+
+Then we can use a greedy search approach to solve this problem by fixing one part and updaing the other like below:
+
+\begin{equation}
+\begin{aligned} \widehat { k ^ { t } } & = \arg \max _ { j \in U } q _ { j } ^ { T } s ^ { t } \\ \widehat { f } _ { \hat { k ^ { t } } } & = \arg \min _ { f _ { \hat { k ^ { t }  }} } \left\| f _ { \hat { k ^ { t }  }} q _ { \hat { k^t } } - s ^ { t } \right\| ^ { 2 }
+\end{aligned}
+\end{equation}
+
+After one iteration of two equations, the algorithm updates the uncertainty by:
+\begin{equation}
+    s ^ { t + 1 } = \max \left( s ^ { t } - \widehat { f } _ { \hat { k } ^ { t } } q _ { \widehat { k } ^ { t } } , 0 \right)
+\end{equation}
+Then we move $\hat{k^t}$ from the unlabeled set $U$ to the labeled set $L$.  The approach is summarized in Algorithm \ref{code:SMGS}. We name this method as sparse modeling by greedy search (SMGS).
+
+\begin{algorithm}
+\caption{SMGS}
+\label{alg:gs}
+\begin{algorithmic}
+    \REQUIRE ~~\\
+    original uncertainty values $s$, similarity matrix $Q$,
+    labeled set $L$, unlabeled set $U$
+    \STATE \textbf{Initialization:} Set $s^1 = s$
+    \FOR{$t = 1:B_q$}
+        \STATE Choose $k^t = arg \max_{j\in U} q^T_j s^t$ from $U$
+        \STATE Compute $f_{k^t}$ by $$ f_{k^t} = arg \min_{f_{k^t}} ||f_{k^t} q_{k^t} - s^t||^2.$$
+        \STATE Update the uncertainty values for the next iteration.
+        \STATE using $$s^{t+1} = max(s^t - f_{k^t}, 0).$$
+        \STATE Move sample index $k^t$ from $U$ to $L$.
+    \ENDFOR
+    \ENSURE ~~ updated labeled set L
+\end{algorithmic}
+    \label{code:SMGS}
+\end{algorithm}
+
+
+\subsection{COMBINE UNCERTAINTY, DIVERSITY AND DENSITY WITH $l_1$ APPROXIMATION}
+
+Due to the limited training data, the non-robust classifier may outputs uncertainty values with large differences for the neighboring samples of a given selected sample. Then the samples with high uncertainty cannot be well represented by the kernel if several low uncertainty samples are around. This situation is shown in Fig. \ref{sparse_selective}. So we are considering using a pre-defined threshold to filter out samples with the uncertainty scores that are much lower than the uncertainty of the neighboring samples. And it will further reduce the number of unlabeled data points.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=15.4cm]{sparse_selective.png}
+    \label{sparse_selective}
+    \caption{An example of selective sampling.}
+    \label{equ:combine}
+\end{figure}
+
+After selective sampling, we can rewrite the equation \ref{equ:formula} as:
+
+\begin{equation}
+\begin{aligned} \widehat { f } = & \arg \min _ { f } \| Q f - s \| ^ { 2 } \\ = & \arg \min _ { f } \frac { 1 } { 2 } f ^ { T } Q ^ { T } Q f - f ^ { T } Q ^ { T } s \\ & \text { s.t. } \| f \| _ { 0 } = B _ { q } , \quad \mathbf { 0 } \leq f \leq \mathbf { 1 } \end{aligned}
+\end{equation}
+
+In the equation, the first term can be viewed as the diverse term, and the second term measures the density in the sample selection. To emphasize high uncertainty samples, we add an uncertainty term, $-f^T s$ to strengthen the role of uncertainty. And we further relax the density term and uncertainty term with penalty parameters $\lambda_1$ and $\lambda_2$ to make it as below:
+
+\begin{equation}
+\begin{aligned} \widehat { f } = & \arg \min _ { f } \frac { 1 } { 2 } f ^ { T } Q ^ { T } Q f - f ^ { T } \left( \lambda _ { 1 } Q ^ { T } + \lambda _ { 2 } I \right) s \\ & \text { s.t. } \| f \| _ { 0 } = B _ { q } , \quad 0 \leq f \leq 1 \end{aligned}
+\end{equation}
+
+\subsubsection{Approximated Solution 2: QP via $l_1$ Norm Relaxation}
+
+Since \ref{equ:combine} contains a $l_0$-norm constraint, it's a NP-hard problem. Therefore, we relax $||f||_0$ to $||f||_1$:
+
+\begin{equation}
+\begin{aligned} \widehat { f } = & \arg \min _ { f } \frac { 1 } { 2 } f ^ { T } Q ^ { T } Q f - f ^ { T } \left( \lambda _ { 1 } Q ^ { T } + \lambda _ { 2 } I \right) s \\ & \text { s.t. } \| f \| _ { 1 } = B _ { q } , \quad 0 \leq f \leq 1 \end{aligned}
+\end{equation}
+
+which is equivalent to:
+\begin{equation}
+    \begin{aligned} 
+        \widehat { f } = & \arg \min _ { f } \frac { 1 } { 2 } f ^ { T } Q ^ { T } Q f - f ^ { T } \left( \lambda _ { 1 } Q ^ { T } + \lambda _ { 2 } I \right) s \\
+        & { s . t . . , \mathbf { 1 } ^ { T } f = B _ { q } , \quad C f \leq d }
+    \end{aligned}
+\end{equation}
+
+where $C = [ - I , I ] ^ { T } , d = \left[ \mathbf { 0 } ^ { T } , \mathbf { 1 } ^ { T } \right] ^ { T }$ and $I$ is the identity matrix. Hence, the formulation becomes a standard quadratic programming (QP) problem. Then we can solve it\cite{vanderbei1993symmetric}.
+
+Firstly, we form the Lagrangian function for the above problem, i.e., 
+$$
+\begin{aligned} L ( f , y , z ) = \frac { 1 } { 2 } f ^ { T } Q ^ { T } Q f - f ^ { T } \left( \lambda _ { 1 } Q ^ { T } + \lambda _ { 2 } I \right) s \\ - y \left( \mathbf { 1 } ^ { T } f - B _ { q } \right) - z ^ { T } ( C f - d ) \end{aligned}
+$$
+where $y$ and $z$ are the vectors of Lagrange multipliers. Then the Karush-Kuhn-Tucker (KKT) conditions [54] can be stated as follows,
+\begin{equation}
+    \begin{aligned} Q ^ { T } Q f - \left( \lambda _ { 1 } Q ^ { T } + \lambda _ { 2 } I \right) s & - y \mathbf { 1 } - C ^ { T } z \\ = 0 \\ C f - d + \tau = 0 \\ \mathbf { 1 } ^ { T } f - B _ { q } = 0 \\ z _ { i } \tau _ { i } = 0 , & i = 1,2 , \ldots , m \\ \tau & \geq \mathbf { 0 } \\ z & \geq \mathbf { 0 } \end{aligned}
+\end{equation}
+
+where $\tau$ is the slack vector that converts inequality constraints
+to equalities. Then we define the residuals as follows,
+
+\begin{equation}
+    \begin{aligned} r _ { d } & = Q ^ { T } Q f - \left( \lambda _ { 1 } Q ^ { T } + \lambda _ { 2 } I \right) s - y \mathbf { 1 } - C ^ { T } z \\ r _ { e q } & = \mathbf { 1 } ^ { T } f - B _ { q } \\ r _ { i n e q } & = C f - d + \tau \\ r _ { \tau z } & = \Gamma z \end{aligned}
+\end{equation}
+where $\Gamma$ is the diagonal matrix of $\tau$. In a Newton step, the changes in $x, \tau, y, \text{and} z$, are given by
+
+\begin{equation}
+\left( \begin{array} { c c c c } { Q ^ { T } Q } & { \mathbf { 0 } } & { - \mathbf { 1 } } & { - C ^ { T } } \\ { \mathbf { 1 } ^ { T } } & { \mathbf { 0 } } & { \mathbf { 0 } } & { \mathbf { 0 } } \\ { C } & { I } & { \mathbf { 0 } } & { \mathbf { 0 } } \\ { \mathbf { 0 } } & { Z } & { \mathbf { 0 } } & { \Gamma } \end{array} \right) \left( \begin{array} { c } { \Delta f } \\ { \Delta \tau } \\ { \Delta y } \\ { \Delta z } \end{array} \right) = - \left( \begin{array} { c } { r _ { d } } \\ { r _ { e q } } \\ { r _ { \text {ineq} } } \\ { r _ { \tau z } } \end{array} \right)
+\end{equation}
+where $Z$ is the diagonal matrix of $z$. Finally we update $f_{t+1} = f_t + \delta f$ for certain iterations or until convergence.
+
+Since we restrict $f$ to the range of [0, 1] and the number of non-zero entries in $f$ is not constrained with $l_1$-norm,
+the solution will give us more non-zero entriesthan $B_q$.
+Because we are only interested in the first $B_q$ samples, we do not want non-selected samples to influence the solution. 
+As a result, we modify the formulation by introducing a parameter $\lambda$ in the constraint, i.e.,
+
+\begin{equation}
+    \begin{array} { c } { \widehat { f } = \arg \min _ { f } \frac { 1 } { 2 } f ^ { T } Q ^ { T } Q f - f ^ { T } \left( \lambda _ { 1 } Q ^ { T } + \lambda _ { 2 } I \right) s } 
+    \\ { s . t . . , \mathbf { 1 } ^ { T } f = \lambda B _ { q } , \quad C f \leq d } \end{array}
+    \label{equ:final_qp}
+\end{equation}
+where we choose $\lambda$ between 0 and 1. We can adjust $\lambda$ so that the solution only contains $B_q$ non-zero entries. We name this method as sparse modeling via quadratic programming (SMQP) in Algorithm \ref{code:SMQP}.
+
+\begin{algorithm}
+\caption{SMQP}
+\label{alg:QP}
+\begin{algorithmic}
+    \REQUIRE ~~\\
+    original uncertainty values $s$, similarity matrix $Q$,
+    labeled set $L$, pre-selected unlabeled set $S_U$
+    \STATE \textbf{Initialization:} Set $\lambda=0.5, lb=0, ub=1$
+    \STATE Solve $\hat{f}$ by \ref{equ:final_qp}
+    \WHILE {$(||\hat{f}||_0 \neq B_q)$}
+        \IF {$||\hat{f}||_0 > B_q$}
+        \STATE $ub = \lambda$
+        \ELSE
+        \STATE $lb = \lambda$
+        \ENDIF
+        $\lambda = (lb + ub) / 2 $
+    \ENDWHILE
+    \STATE Solve $\hat{f}$ by \ref{equ:final_qp}
+    \STATE Sort $\hat{f}$ in descending order and move the first $B_q$ indices of $\hat{f}$ from $S_U$ to $L$.
+    \ENSURE ~~ updated labeled set L
+\end{algorithmic}
+    \label{code:SMQP}
+\end{algorithm}
+
+
+\subsection{Experimental results}
+
+\subsubsection{Experiment Setup}
+\begin{table}[H]
+    \caption{datasets}
+  \begin{center}
+\begin{tabular}{lll}
+    \hline
+Name           & \# of samples & \# of class \\
+    \hline
+COIL-20        & 1440          & 20          \\
+MNIST(subset)  & 3000          & 10          \\
+Cam-Trawl Fish & 1026          & 5           \\
+Chute Fish     & 5032          & 27          \\
+    \hline
+\end{tabular}
+\end{center}
+\label{table:sparse_set}
+\end{table}
+
+We evaluate the proposed method on four image datasets, COIL-20, a subset of MNIST \cite{mnist}, Cam-Trawl Fish and Chute Fish. The information of the datasets is described in TABLE \ref{table:sparse_set}. For each dataset, we split the data into 4 parts: seed set (labeled set), unlabeled set, validation set and testing set, denoted as $L, U, V , T$, respectively. 
+
+What's more, two types of features are adopted. One is based on the traditional extraction method and the other is using the convolutional neural networks (CNNs). The sizes of features for the datasets are shown in Table \ref{table:sparse_feature}. Before extracting CNN features, we use the transfer learning on each dataset to achieve better feature representation. 
+
+\begin{table}[H]
+    \caption{Features}
+  \begin{center}
+\begin{tabular}{ll}
+    \hline
+Name                   & Feature size \\
+    \hline
+COIL-20(concat)        & 1024         \\
+COIL-20(CNN)           & 1536         \\
+MNIST(concat)          & 784          \\
+MNIST(CNN)             & 1024         \\
+Cam-Trawl Fish(concat) & 7168         \\
+Cam-Trawl Fish(CNN)    & 1536         \\
+Chute Fish(concat)     & 7168         \\
+Chute Fish(CNN)        & 1536         \\
+    \hline
+\end{tabular}
+\end{center}
+\label{table:sparse_feature}
+\end{table}
+
+\subsubsection{Performance Comparison}
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=15.4cm]{sparse_cmp1.png}
+    \caption{Average accuracy with seed size c = 3 on four datasets using traditional features. (a) COIL-20. (b) MNIST. (c) Cam-Trawl Fish. (d) Chute Fish.}
+    \label{sparse_result1}
+\end{figure}
+
+We run the algorithms with different settings:
+\begin{enumerate}
+    \item batch sizes from 15 to 105 with 15 increments.
+    \item different features like traditional features or CNN-based features.
+    \item different seed sizes of c = 3 or c = 9.
+\end{enumerate} 
+Then we report the average accuracy for all the eight methods. Each result is based on an average of 10 runs of the same setting. 
+
+Figure \ref{sparse_result1} compares the performance of eight active learning algorithms with seed size = 3 and traditional features. In general, SMQP and SMGS outperform all of other methods.
+To be specific, SMQP gives robust results on different batch sizes and SMGS also gives some promising results. 
+But, since SMGS can't gurantee the optimal solution, in a few cases the accuracy of SMGS is slightly lower than BvSB method.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=15.4cm]{sparse_cmp2.png}
+    \caption{Average accuracy with seed size c = 3 on four datasets using CNN features. (a) COIL-20. (b) MNIST. (c) Cam-Trawl Fish. (d) Chute Fish.}
+    \label{sparse_result2}
+\end{figure}
+
+
+Figure \ref{sparse_result2} shows the experimental results using CNN features. 
+This experiment demonstrates that when a better feature is used, the performance of an active
+learning algorithm usually improves. Same as before, SMQP outperforms the other approaches consistently with different
+features. 
+
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=15.4cm]{sparse_cmp3.png}
+    \caption{Average accuracy with seed size c = 9 on four datasets using traditional features. (a) COIL-20. (b) MNIST. (c) Cam-Trawl Fish. (d) Chute Fish.}
+    \label{sparse_result3}
+\end{figure}
+
+This experiment examines the impact of the seed size by
+changing c = 9 on these four datasets.
+The result of using traditional features for complete comparison are shown in Fig. \ref{sparse_result3}. 
+The results also demonstrates that the proposed methods are consistently better than other methods, which
+further indicates that leveraging the unlabeled pool data does
+help improve the active learning performance.
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=10.4cm]{sparse_time.png}
+    \caption{The elapsed time comparison.}
+    \label{sparse_time}
+\end{figure}
+
+The figure.\ref{sparse_time} shows the consuming time to select 15 data for labeling. Except SMQP and USDM, the elapse time remains flat with the increase of the pool size. 
+And SMQP without selective sampling is computationally expensive since it also searches the optimal $\lambda$ in the optimization. As for SMQP, it outperforms USDM in efficiency with the increase of pool
+size. The reason is that the selective sampling strategy drops low uncertainty samples to reduce a large amount of sample space.
