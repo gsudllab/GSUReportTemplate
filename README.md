@@ -1,6 +1,6 @@
 # GSUReportTemplate
 
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/gsudllab/GSUReportTemplate/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/gsudllab/GSUReportTemplate/blob/master/LICENSE.md)
 
 
 The latex and powerpoint templates for Georgia State University.
