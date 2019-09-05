@@ -43,3 +43,38 @@
 \end{figure}
 
 The Figure.\ref{sparse_time} shows the idea.
+
+
+\begin{table}[t]
+\caption{test table}
+\label{test-case}
+\begin{center}
+\begin{threeparttable}
+\begin{tabular}{lc}
+% \hline \\[-1em]
+\toprule
+\multirow{2}{*}{Method} & Test Accuracy (\%) \\
+                        & again              \\
+% \hline \\[-1em]
+\midrule
+Supervised              & 55.44              \\
+better model            & 59.71              \\
+\midrule
+best model              & \textbf{61.76}     \\ 
+% \hline
+\bottomrule
+\end{tabular}
+\end{threeparttable}
+\end{center}
+\vspace{-6mm}
+\end{table}
+
+\[
+\begin{matrix}
+d_{11} & d_{12} & d_{13} & \dots & d_{1n}\\
+  & d_{22} & d_{23} & \dots & d_{2n}\\
+  &  & d_{33}       &\dots & d_{3n}\\
+  &  &              &\ddots & \vdots\\
+  &  &              &       & d_{nn}
+\end{matrix}
+\]
