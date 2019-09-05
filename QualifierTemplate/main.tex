@@ -6,12 +6,18 @@
 \usepackage[utf8]{inputenc}
 \usepackage[svgnames]{xcolor}
 
+\usepackage{multirow}
+\usepackage{subfigure}
+\usepackage{booktabs}
 \usepackage{afterpage}
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
 \usepackage{algorithm}
 \usepackage{algorithmic}
+\usepackage[flushleft]{threeparttable}
+
+\usepackage{subfiles}
 
 \pagestyle{plain}
 
@@ -47,32 +53,46 @@
 \end{center}
 \end{figure}
 
-\begin{Large}
-\textbf{Georgia State University} \\
-\end{Large}
-Department of Computer Science \\
-\vspace*{0.2in}
-\begin{Large}
-\textbf{title of report} \\
-\end{Large}
-\vspace*{0.3in}
-\begin{large}
-Ph.D Qualifier Report\\
-\end{large}
-\vspace*{0.3in}
-\begin{large}
-Xiulong Yang\\
-\end{large}
-\vspace*{0.3in}
-\rule{80mm}{0.1mm}\\
 \vspace*{0.1in}
-\begin{large}
+\begin{LARGE}
+Ph.D Qualifier Exam Report\\
+\end{LARGE}
+\vspace*{0.3in}
+\begin{LARGE}
+\textbf{Complex Question Answering: Unsupervised Learning Approaches and Experiments} \\
+\end{LARGE}
+\vspace*{0.3in}
+\begin{Large}
+  Presenter: \\
+\vspace*{0.1in}
+\textbf{Xiulong Yang}\\
+\end{Large}
+
+\vspace*{0.3in}
+\vspace*{0.1in}
+\begin{Large}
 Committee:\\
 \vspace*{0.1in}
-Dr.(Chair), Dr., and Dr.\\
+
+\begin{tabular}{lc}
+Dr.(Chair) \\
+Dr.  \\
+Dr.  
+\end{tabular}
+\end{Large}
+\end{center}
+
+\rule{160mm}{0.1mm}
+
+\begin{center}
+\begin{large}
+\textbf{Department of Computer Science} \\
+\textbf{Georgia State University}
 \end{large}
 \end{center}
+
 \end{titlepage}
+  
 
 \newcommand{\CC}{C\nolinebreak\hspace{-.05em}\raisebox{.4ex}{\tiny\bf +}\nolinebreak\hspace{-.10em}\raisebox{.4ex}{\tiny\bf +}}
 \def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
@@ -83,16 +103,6 @@ Dr.(Chair), Dr., and Dr.\\
 
 \input{abstract.tex}
 \newpage
-
-\[
-\begin{matrix}
-d_{11} & d_{12} & d_{13} & \dots & d_{1n}\\
-  & d_{22} & d_{23} & \dots & d_{2n}\\
-  &  & d_{33}       &\dots & d_{3n}\\
-  &  &              &\ddots & \vdots\\
-  &  &              &       & d_{nn}
-\end{matrix}
-\]
 
 \tableofcontents
 \newpage
@@ -114,19 +124,19 @@ d_{11} & d_{12} & d_{13} & \dots & d_{1n}\\
 %	paper1 Section
 %----------------------------------------------------------------------------------------
 
-\input{paper1.tex}
+\subfile{paper1.tex}
 \newpage
 %----------------------------------------------------------------------------------------
 %	paper2 Section
 %----------------------------------------------------------------------------------------
 
-\input{paper2.tex}
+\subfile{paper2.tex}
 \newpage
 
 %----------------------------------------------------------------------------------------
 %   future work Section
 %----------------------------------------------------------------------------------------
-\input{future.tex}
+\subfile{future.tex}
 
 %----------------------------------------------------------------------------------------
 %   Conclusion Section
