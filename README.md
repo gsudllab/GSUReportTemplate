@@ -3,7 +3,7 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/gsudllab/GSUReportTemplate/blob/master/LICENSE.md)
 
 
-The latex and powerpoint templates for Georgia State University.
+The latex, word(doc) and powerpoint templates for Georgia State University.
 
 The cover of report file looks like ![cover of latex](https://raw.githubusercontent.com/sndnyang/GSUReportTemplate/master/latex_cover.png)
 
